@@ -5,13 +5,13 @@ import numpy
 
 import facefusion.globals
 import facefusion.processors.frame.core as frame_processors
-from facefusion import config, wording
+from facefusion import config, process_manager, wording
 from facefusion.face_analyser import get_one_face, get_many_faces, find_similar_faces, clear_face_analyser
 from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_region_mask, clear_face_occluder, clear_face_parser
 from facefusion.face_helper import warp_face_by_face_landmark_5, categorize_age, categorize_gender
 from facefusion.face_store import get_reference_faces
 from facefusion.content_analyser import clear_content_analyser
-from facefusion.typing import Face, VisionFrame, Update_Process, ProcessMode, QueuePayload
+from facefusion.typing import Face, VisionFrame, UpdateProcess, ProcessMode, QueuePayload
 from facefusion.vision import read_image, read_static_image, write_image
 from facefusion.processors.frame.typings import FaceDebuggerInputs
 from facefusion.processors.frame import globals as frame_processors_globals, choices as frame_processors_choices
@@ -36,7 +36,7 @@ def set_options(key : Literal['model'], value : Any) -> None:
 
 
 def register_args(program : ArgumentParser) -> None:
-	program.add_argument('--face-debugger-items', help = wording.get('help.face_debugger_items').format(choices = ', '.join(frame_processors_choices.face_debugger_items)), default = config.get_str_list('frame_processors.face_debugger_items', 'landmark-5 face-mask'), choices = frame_processors_choices.face_debugger_items, nargs = '+', metavar = 'FACE_DEBUGGER_ITEMS')
+	program.add_argument('--face-debugger-items', help = wording.get('help.face_debugger_items').format(choices = ', '.join(frame_processors_choices.face_debugger_items)), default = config.get_str_list('frame_processors.face_debugger_items', 'face-landmark-5 face-mask'), choices = frame_processors_choices.face_debugger_items, nargs = '+', metavar = 'FACE_DEBUGGER_ITEMS')
 
 
 def apply_args(program : ArgumentParser) -> None:
@@ -70,6 +70,7 @@ def post_process() -> None:
 def debug_face(target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
 	primary_color = (0, 0, 255)
 	secondary_color = (0, 255, 0)
+	tertiary_color = (255, 255, 0)
 	bounding_box = target_face.bounding_box.astype(numpy.int32)
 	temp_vision_frame = temp_vision_frame.copy()
 
@@ -96,17 +97,22 @@ def debug_face(target_face : Face, temp_vision_frame : VisionFrame) -> VisionFra
 		inverse_vision_frame[inverse_vision_frame > 0] = 255
 		inverse_contours = cv2.findContours(inverse_vision_frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0]
 		cv2.drawContours(temp_vision_frame, inverse_contours, -1, primary_color, 2)
+	if 'face-landmark-5' in frame_processors_globals.face_debugger_items:
+		face_landmark_5 = target_face.landmark['5'].astype(numpy.int32)
+		for index in range(face_landmark_5.shape[0]):
+			cv2.circle(temp_vision_frame, (face_landmark_5[index][0], face_landmark_5[index][1]), 3, primary_color, -1)
+	if 'face-landmark-5/68' in frame_processors_globals.face_debugger_items:
+		face_landmark_5_68 = target_face.landmark['5/68'].astype(numpy.int32)
+		is_equal = numpy.array_equal(target_face.landmark['5'], target_face.landmark['5/68'])
+		for index in range(face_landmark_5_68.shape[0]):
+			cv2.circle(temp_vision_frame, (face_landmark_5_68[index][0], face_landmark_5_68[index][1]), 3, tertiary_color if is_equal else secondary_color, -1)
+	if 'face-landmark-68' in frame_processors_globals.face_debugger_items:
+		face_landmark_68 = target_face.landmark['68'].astype(numpy.int32)
+		for index in range(face_landmark_68.shape[0]):
+			cv2.circle(temp_vision_frame, (face_landmark_68[index][0], face_landmark_68[index][1]), 3, secondary_color, -1)
 	if bounding_box[3] - bounding_box[1] > 60 and bounding_box[2] - bounding_box[0] > 60:
 		top = bounding_box[1]
 		left = bounding_box[0] + 20
-		if 'landmark-5' in frame_processors_globals.face_debugger_items:
-			face_landmark_5 = target_face.landmark['5/68'].astype(numpy.int32)
-			for index in range(face_landmark_5.shape[0]):
-				cv2.circle(temp_vision_frame, (face_landmark_5[index][0], face_landmark_5[index][1]), 3, primary_color, -1)
-		if 'landmark-68' in frame_processors_globals.face_debugger_items:
-			face_landmark_68 = target_face.landmark['68'].astype(numpy.int32)
-			for index in range(face_landmark_68.shape[0]):
-				cv2.circle(temp_vision_frame, (face_landmark_68[index][0], face_landmark_68[index][1]), 3, secondary_color, -1)
 		if 'score' in frame_processors_globals.face_debugger_items:
 			face_score_text = str(round(target_face.score, 2))
 			top = top + 20
@@ -130,47 +136,47 @@ def process_frame(inputs : FaceDebuggerInputs) -> VisionFrame:
 	reference_faces = inputs['reference_faces']
 	target_vision_frame = inputs['target_vision_frame']
 
-	if 'reference' in facefusion.globals.face_selector_mode:
-		similar_faces = find_similar_faces(reference_faces, target_vision_frame, facefusion.globals.reference_face_distance)
-		if similar_faces:
-			for similar_face in similar_faces:
-				target_vision_frame = debug_face(similar_face, target_vision_frame)
-	if 'one' in facefusion.globals.face_selector_mode:
-		target_face = get_one_face(target_vision_frame)
-		if target_face:
-			target_vision_frame = debug_face(target_face, target_vision_frame)
-	if 'many' in facefusion.globals.face_selector_mode:
+	if facefusion.globals.face_selector_mode == 'many':
 		many_faces = get_many_faces(target_vision_frame)
 		if many_faces:
 			for target_face in many_faces:
 				target_vision_frame = debug_face(target_face, target_vision_frame)
+	if facefusion.globals.face_selector_mode == 'one':
+		target_face = get_one_face(target_vision_frame)
+		if target_face:
+			target_vision_frame = debug_face(target_face, target_vision_frame)
+	if facefusion.globals.face_selector_mode == 'reference':
+		similar_faces = find_similar_faces(reference_faces, target_vision_frame, facefusion.globals.reference_face_distance)
+		if similar_faces:
+			for similar_face in similar_faces:
+				target_vision_frame = debug_face(similar_face, target_vision_frame)
 	return target_vision_frame
 
 
-def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload], update_progress : Update_Process) -> None:
+def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload], update_progress : UpdateProcess) -> None:
 	reference_faces = get_reference_faces() if 'reference' in facefusion.globals.face_selector_mode else None
 
-	for queue_payload in queue_payloads:
+	for queue_payload in process_manager.manage(queue_payloads):
 		target_vision_path = queue_payload['frame_path']
 		target_vision_frame = read_image(target_vision_path)
-		result_frame = process_frame(
+		output_vision_frame = process_frame(
 		{
 			'reference_faces': reference_faces,
 			'target_vision_frame': target_vision_frame
 		})
-		write_image(target_vision_path, result_frame)
+		write_image(target_vision_path, output_vision_frame)
 		update_progress()
 
 
 def process_image(source_paths : List[str], target_path : str, output_path : str) -> None:
 	reference_faces = get_reference_faces() if 'reference' in facefusion.globals.face_selector_mode else None
 	target_vision_frame = read_static_image(target_path)
-	result_frame = process_frame(
+	output_vision_frame = process_frame(
 	{
 		'reference_faces': reference_faces,
 		'target_vision_frame': target_vision_frame
 	})
-	write_image(output_path, result_frame)
+	write_image(output_path, output_vision_frame)
 
 
 def process_video(source_paths : List[str], temp_frame_paths : List[str]) -> None:

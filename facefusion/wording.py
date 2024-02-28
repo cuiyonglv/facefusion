@@ -10,6 +10,8 @@ WORDING : Dict[str, Any] =\
 	'processing': 'Processing',
 	'downloading': 'Downloading',
 	'temp_frames_not_found': 'Temporary frames not found',
+	'copying_image_succeed': 'Copying image succeed',
+	'copying_image_failed': 'Copying image failed',
 	'compressing_image_succeed': 'Compressing image succeed',
 	'compressing_image_skipped': 'Compressing image skipped',
 	'merging_video_fps': 'Merging video with {video_fps} FPS',
@@ -18,6 +20,7 @@ WORDING : Dict[str, Any] =\
 	'restoring_audio_succeed': 'Restoring audio succeed',
 	'restoring_audio_skipped': 'Restoring audio skipped',
 	'clearing_temp': 'Clearing temporary resources',
+	'processing_stopped': 'Processing stopped',
 	'processing_image_succeed': 'Processing to image succeed in {seconds} seconds',
 	'processing_image_failed': 'Processing to image failed',
 	'processing_video_succeed': 'Processing to video succeed in {seconds} seconds',
@@ -68,7 +71,7 @@ WORDING : Dict[str, Any] =\
 		'face_detector_size': 'specify the size of the frame provided to the face detector',
 		'face_detector_score': 'filter the detected faces base on the confidence score',
 		# face selector
-		'face_selector_mode': 'use reference based tracking with simple matching',
+		'face_selector_mode': 'use reference based tracking or simple matching',
 		'reference_face_position': 'specify the position used to create the reference face',
 		'reference_face_distance': 'specify the desired similarity between the reference face and target face',
 		'reference_frame_number': 'specify the frame used to create the reference face',
@@ -85,6 +88,7 @@ WORDING : Dict[str, Any] =\
 		'keep_temp': 'keep the temporary resources after processing',
 		# output creation
 		'output_image_quality': 'specify the image quality which translates to the compression factor',
+		'output_image_resolution': 'specify the image output resolution based on the target image',
 		'output_video_encoder': 'specify the encoder use for the video compression',
 		'output_video_preset': 'balance fast video processing and video file size',
 		'output_video_quality': 'specify the video quality which translates to the compression factor',
@@ -161,6 +165,7 @@ WORDING : Dict[str, Any] =\
 		# output options
 		'output_path_textbox': 'OUTPUT PATH',
 		'output_image_quality_slider': 'OUTPUT IMAGE QUALITY',
+		'output_image_resolution_dropdown': 'OUTPUT IMAGE RESOLUTION',
 		'output_video_encoder_dropdown': 'OUTPUT VIDEO ENCODER',
 		'output_video_preset_dropdown': 'OUTPUT VIDEO PRESET',
 		'output_video_quality_slider': 'OUTPUT VIDEO QUALITY',

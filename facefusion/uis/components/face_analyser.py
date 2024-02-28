@@ -11,18 +11,20 @@ from facefusion.uis.core import register_ui_component
 FACE_ANALYSER_ORDER_DROPDOWN : Optional[gradio.Dropdown] = None
 FACE_ANALYSER_AGE_DROPDOWN : Optional[gradio.Dropdown] = None
 FACE_ANALYSER_GENDER_DROPDOWN : Optional[gradio.Dropdown] = None
+FACE_DETECTOR_MODEL_DROPDOWN : Optional[gradio.Dropdown] = None
 FACE_DETECTOR_SIZE_DROPDOWN : Optional[gradio.Dropdown] = None
 FACE_DETECTOR_SCORE_SLIDER : Optional[gradio.Slider] = None
-FACE_DETECTOR_MODEL_DROPDOWN : Optional[gradio.Dropdown] = None
+FACE_DETECTOR_TWEAKS_CHECKBOX_GROUP : Optional[gradio.CheckboxGroup] = None
 
 
 def render() -> None:
 	global FACE_ANALYSER_ORDER_DROPDOWN
 	global FACE_ANALYSER_AGE_DROPDOWN
 	global FACE_ANALYSER_GENDER_DROPDOWN
+	global FACE_DETECTOR_MODEL_DROPDOWN
 	global FACE_DETECTOR_SIZE_DROPDOWN
 	global FACE_DETECTOR_SCORE_SLIDER
-	global FACE_DETECTOR_MODEL_DROPDOWN
+	global FACE_DETECTOR_TWEAKS_CHECKBOX_GROUP
 
 	face_detector_size_dropdown_args : Dict[str, Any] =\
 	{
@@ -102,3 +104,4 @@ def update_face_detector_size(face_detector_size : str) -> None:
 
 def update_face_detector_score(face_detector_score : float) -> None:
 	facefusion.globals.face_detector_score = face_detector_score
+
